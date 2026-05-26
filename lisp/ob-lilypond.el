@@ -123,9 +123,10 @@ Depending on whether we are in arrange mode either:
   (This is the default basic mode)
 2. Tangle all lilypond blocks and process the result (arrange mode)"
 
-  (ly-set-header-args ly-arrange-mode)
   (if ly-arrange-mode
-      (ly-tangle)
+      (progn
+        (ly-set-header-args t)
+        (ly-tangle))
     (ly-process-basic body params)))
 
 (defun ly-tangle ()
@@ -139,29 +140,35 @@ specific arguments to =org-babel-tangle="
 
 (defun ly-process-basic (body params)
   "Execute a lilypond block in basic mode"
-  
-  (let* ((result-params (cdr (assoc :result-params params)))
-	 (out-file (cdr (assoc :file params)))
-	 (cmdline (or (cdr (assoc :cmdline params))
-		      ""))
+
+  (let* ((out-file (expand-file-name (cdr (assoc :file params))))
+	 (ext (downcase (or (file-name-extension out-file) "pdf")))
+	 (cmdline (or (cdr (assoc :cmdline params)) ""))
+	 (crop (member ext '("png" "svg")))
+	 (format-flag (cond ((string= ext "png") "--png")
+			    ((string= ext "svg") "-dbackend=svg")
+			    (t "")))
+	 (out-stem (file-name-sans-extension out-file))
 	 (in-file (org-babel-temp-file "lilypond-")))
 
     (with-temp-file in-file
       (insert (org-babel-expand-body:generic body params)))
-    
+
     (org-babel-eval
      (concat
       (ly-determine-ly-path)
-      " -dbackend=eps "
-      "-dno-gs-load-fonts "
-      "-dinclude-eps-fonts "
-      "--png "
-      "--output="
-      (file-name-sans-extension out-file)
       " "
-      cmdline
-      in-file) "")
-    ) nil)
+      format-flag
+      (when crop " -dcrop")
+      " --output=" out-stem
+      " " cmdline
+      " " in-file) "")
+
+    (when crop
+      (let ((cropped (concat out-stem ".cropped." ext)))
+        (when (file-exists-p cropped)
+          (rename-file cropped out-file t))))
+    nil))
 
 (defun org-babel-prep-session:lilypond (session params)
   "Return an error because LilyPond exporter does not support sessions."
