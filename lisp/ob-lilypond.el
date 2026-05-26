@@ -31,7 +31,8 @@
 (require 'cl-lib)
 (require 'ob)
 (require 'ob-eval)
-(defalias 'lilypond-mode 'LilyPond-mode)
+(unless (fboundp 'lilypond-mode)
+  (defalias 'lilypond-mode 'LilyPond-mode))
 
 (declare-function show-all "outline" ())
 
