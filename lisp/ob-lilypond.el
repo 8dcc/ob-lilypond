@@ -28,6 +28,7 @@
 ;; https://github.com/mjago/ob-lilypond
 
 ;;; Code:
+(require 'cl-lib)
 (require 'ob)
 (require 'ob-eval)
 (defalias 'lilypond-mode 'LilyPond-mode)
@@ -102,7 +103,7 @@ blocks")
 (defun org-babel-expand-body:lilypond (body params)
   "Expand BODY according to PARAMS, return the expanded body."
 
-  (let ((vars (mapcar #'cdr (org-babel-get-header params :var))))
+  (let ((vars (mapcar #'cdr (cl-remove-if-not (lambda (p) (eq (car p) :var)) params))))
     (mapc
      (lambda (pair)
        (let ((name (symbol-name (car pair)))
